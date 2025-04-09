@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import axios from '../utils/axiosConfig'; // Use consistent axios instance
+import React, { useState, useEffect } from 'react';
+import axios from '../utils/axiosConfig'; // Custom axios instance
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
@@ -15,6 +15,8 @@ const Login = () => {
 
     const validateForm = () => {
         if (!formData.username.trim()) return 'Username is required';
+        if (formData.username.length > 50) return 'Username must be 50 characters or less';
+        if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) return 'Username can only contain letters, numbers, and underscores';
         if (!formData.password) return 'Password is required';
         if (formData.password.length < 6) return 'Password must be at least 6 characters';
         return null;
@@ -34,20 +36,32 @@ const Login = () => {
         }
 
         try {
+            console.log('Attempting login with:', formData);
             const response = await axios.post('/auth/login', {
                 username: formData.username,
                 password: formData.password,
-            }, { timeout: 5000 });
+            }); // Uses global timeout from axiosConfig
+            console.log('Login response:', response.status, response.data);
 
             if (response.status === 200) {
                 const token = response.data.token;
+                if (!token) {
+                    throw new Error('No token received from server');
+                }
                 localStorage.setItem('token', token);
-                console.log('Stored token:', token); // Debug log
+                console.log('Stored token:', token);
                 setSuccess('Login successful! Redirecting to Admin Panel...');
-                setTimeout(() => navigate('/admin', { replace: true }), 1000);
+                const timeoutId = setTimeout(() => navigate('/admin', { replace: true }), 1000);
+                return () => clearTimeout(timeoutId); // Cleanup handled by useEffect if needed
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+            if (err.code === 'ECONNABORTED') {
+                setError('Request timed out. Please try again.');
+            } else if (err.response) {
+                setError(err.response.data?.message || 'Login failed. Please check your credentials.');
+            } else {
+                setError('Network error. Please check your connection.');
+            }
             console.error('Login error:', err);
         } finally {
             setLoading(false);
@@ -103,7 +117,11 @@ const Login = () => {
                         </button>
                     </div>
                     <div className="form-group">
-                        <button type="submit" disabled={loading} aria-label="Login">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            aria-label={loading ? 'Logging in' : 'Login'}
+                        >
                             {loading ? 'Logging in...' : 'Login'}
                         </button>
                     </div>

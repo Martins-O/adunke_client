@@ -9,7 +9,7 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const navigate = useNavigate();
-    const [isMenuOpen, setMenuOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
         const initializeDashboard = async () => {
@@ -47,7 +47,7 @@ const Dashboard = () => {
     }, [navigate]);
 
     const toggleMenu = () => {
-        setMenuOpen(!isMenuOpen);
+        setIsMenuOpen(!isMenuOpen);
     };
 
     const handleDelete = async (productId) => {
@@ -88,6 +88,67 @@ const Dashboard = () => {
     const handleLogout = () => {
         localStorage.removeItem('token');
         navigate('/login');
+    };
+
+    const renderProductTable = () => {
+        if (!Array.isArray(products)) {
+            return <p>Error: Products data is invalid.</p>;
+        }
+
+        if (products.length === 0) {
+            return <p>No products available.</p>;
+        }
+
+        return (
+            <div className="product-table">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Category</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {products.map((product) => (
+                        <tr key={product._id}>
+                            <td>{product.name}</td>
+                            <td>₦{product.price.toFixed(2)}</td>
+                            <td>{product.stock}</td>
+                            <td>{product.category}</td>
+                            <td>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => handleViewDetails(product._id)}
+                                    disabled={loading}
+                                    style={{ marginRight: '0.5rem' }}
+                                >
+                                    Details
+                                </button>
+                                <button
+                                    className="btn btn-warning"
+                                    onClick={() => handleUpdate(product._id)}
+                                    disabled={loading}
+                                    style={{ marginRight: '0.5rem' }}
+                                >
+                                    Update
+                                </button>
+                                <button
+                                    className="btn btn-danger"
+                                    onClick={() => handleDelete(product._id)}
+                                    disabled={loading}
+                                >
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
+        );
     };
 
     return (
@@ -149,60 +210,7 @@ const Dashboard = () => {
 
                     <section className="dashboard-products">
                         <h2>Product Overview</h2>
-                        {Array.isArray(products) && products.length === 0 ? (
-                            <p>No products available.</p>
-                        ) : Array.isArray(products) ? (
-                            <div className="product-table">
-                                <table>
-                                    <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Price</th>
-                                        <th>Stock</th>
-                                        <th>Category</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {products.map((product) => (
-                                        <tr key={product._id}>
-                                            <td>{product.name}</td>
-                                            <td>₦{product.price.toFixed(2)}</td>
-                                            <td>{product.stock}</td>
-                                            <td>{product.category}</td>
-                                            <td>
-                                                <button
-                                                    className="btn btn-primary"
-                                                    onClick={() => handleViewDetails(product._id)}
-                                                    disabled={loading}
-                                                    style={{ marginRight: '0.5rem' }}
-                                                >
-                                                    Details
-                                                </button>
-                                                <button
-                                                    className="btn btn-warning"
-                                                    onClick={() => handleUpdate(product._id)}
-                                                    disabled={loading}
-                                                    style={{ marginRight: '0.5rem' }}
-                                                >
-                                                    Update
-                                                </button>
-                                                <button
-                                                    className="btn btn-danger"
-                                                    onClick={() => handleDelete(product._id)}
-                                                    disabled={loading}
-                                                >
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <p>Error: Products data is invalid.</p>
-                        )}
+                        {renderProductTable()}
                     </section>
                 </>
             )}

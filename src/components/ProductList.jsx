@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
+import axios from '../utils/axiosConfig'; // Use configured instance
 import { Link } from 'react-router-dom';
-import { debounce } from 'lodash'; // For debouncing search input
+import { debounce } from 'lodash';
 
 const ProductList = () => {
     const [products, setProducts] = useState([]);
@@ -14,18 +14,17 @@ const ProductList = () => {
         inStock: false,
     });
     const [sort, setSort] = useState('newest');
+    const [inputValue, setInputValue] = useState(''); // Separate input state
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalProducts, setTotalProducts] = useState(0);
-    const productsPerPage = 12;
+    const productsPerPage = 10;
 
-    // Debounced search handler
     const debouncedSearch = useMemo(
-        () =>
-            debounce((query) => {
-                setSearchQuery(query);
-                setCurrentPage(1); // Reset to first page when search query changes
-            }, 300),
+        () => debounce((query) => {
+            setSearchQuery(query);
+            setCurrentPage(1);
+        }, 300),
         []
     );
 
@@ -34,32 +33,32 @@ const ProductList = () => {
         setError(null);
 
         try {
-            const response = await axios.get(
-                `${import.meta.env.VITE_API_URL}/products/`,
-                {
-                    params: {
-                        category: filters.category,
-                        minPrice: filters.minPrice,
-                        maxPrice: filters.maxPrice,
-                        inStock: filters.inStock,
-                        sort,
-                        search: searchQuery,
-                        page: currentPage,
-                        limit: productsPerPage,
-                    },
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    timeout: 5000,
-                }
-            );
+            const response = await axios.get('/products', {
+                params: {
+                    category: filters.category,
+                    minPrice: filters.minPrice,
+                    maxPrice: filters.maxPrice,
+                    inStock: filters.inStock,
+                    sort,
+                    search: searchQuery,
+                    page: currentPage,
+                    limit: productsPerPage,
+                },
+            });
+            console.log('API response:', response.data);
 
             if (response.status === 200) {
-                setProducts(response.data.products);
-                setTotalProducts(response.data.total);
+                setProducts(response.data.products || response.data); // Adjust based on backend response
+                setTotalProducts(response.data.total || response.data.length);
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load products');
+            setError(
+                err.code === 'ECONNABORTED'
+                    ? 'Request timed out. Please try again.'
+                    : err.response
+                        ? err.response.data?.message || 'Failed to load products'
+                        : 'Network error. Please check your connection.'
+            );
             console.error('Error fetching products:', err);
         } finally {
             setLoading(false);
@@ -76,15 +75,16 @@ const ProductList = () => {
             ...prev,
             [name]: type === 'checkbox' ? checked : value,
         }));
-        setCurrentPage(1); // Reset to first page when filters change
+        setCurrentPage(1);
     };
 
     const handleSortChange = (e) => {
         setSort(e.target.value);
-        setCurrentPage(1); // Reset to first page when sorting changes
+        setCurrentPage(1);
     };
 
     const handleSearch = (e) => {
+        setInputValue(e.target.value);
         debouncedSearch(e.target.value);
     };
 
@@ -100,6 +100,7 @@ const ProductList = () => {
             inStock: false,
         });
         setSort('newest');
+        setInputValue('');
         setSearchQuery('');
         setCurrentPage(1);
     };
